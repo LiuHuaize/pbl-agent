@@ -21,12 +21,11 @@
 - **步骤**:
   - 安装Python 3.11环境
   - 配置Node.js 18+环境
-  - 安装PostgreSQL 15数据库
-  - 配置Redis缓存服务
+  - 创建Supabase项目并配置数据库
   - 申请Gemini-2.5-Pro API密钥
 - **验证标准**: 
   - 能够成功启动前后端项目
-  - 数据库连接正常
+  - Supabase项目连接正常
   - Gemini API调用成功
 
 #### 1.2 项目架构初始化
@@ -35,27 +34,27 @@
   - 创建后端FastAPI项目结构
   - 创建前端Next.js项目结构
   - 配置Docker开发环境
-  - 设置数据库迁移脚本
+  - 配置Supabase MCP工具集成
   - 配置基础路由和中间件
 - **验证标准**: 
   - 项目能够正常启动
   - API网关正常响应
-  - 数据库表结构创建成功
+  - Supabase表结构创建成功
 
 ### 🗄️ 数据库设计与实现
 
 #### 1.3 核心数据模型
 - **任务**: 设计并实现核心数据表
 - **步骤**:
-  - 创建用户管理相关表（User, Session）
-  - 创建项目相关表（Project, ProjectInteraction）
-  - 创建卡片系统表（ActivityCard, ToolCard, CooperationCard）
-  - 创建资源管理表（TeachingResource）
-  - 编写数据库种子文件
+  - 使用Supabase创建用户管理相关表（User, Session）
+  - 使用Supabase创建项目相关表（Project, ProjectInteraction）
+  - 使用Supabase创建卡片系统表（ActivityCard, ToolCard, CooperationCard）
+  - 使用Supabase创建资源管理表（TeachingResource）
+  - 通过Supabase管理后台导入初始数据
 - **验证标准**: 
   - 所有表结构创建成功
   - 外键约束正常工作
-  - 种子数据导入成功
+  - 初始数据导入成功
 
 #### 1.4 PBL卡片体系录入
 - **任务**: 录入157张专业PBL卡片数据
@@ -404,18 +403,18 @@
   - 安全配置正确
   - 监控系统有效
 
-#### 7.2 数据迁移与备份
-- **任务**: 实现数据管理策略
+#### 7.2 Supabase数据管理
+- **任务**: 配置Supabase数据管理策略
 - **步骤**:
-  - 执行数据迁移脚本
-  - 建立备份策略
-  - 实现数据恢复机制
-  - 配置定期备份
-  - 测试恢复流程
+  - 配置Supabase项目备份策略
+  - 设置数据库分支管理
+  - 配置Row Level Security (RLS)策略
+  - 设置实时数据同步
+  - 测试数据访问权限
 - **验证标准**: 
-  - 数据迁移无误
-  - 备份策略有效
-  - 恢复流程正确
+  - Supabase备份策略配置正确
+  - RLS策略工作正常
+  - 实时同步功能正常
 
 ### 🎯 上线发布
 

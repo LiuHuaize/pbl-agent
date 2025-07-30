@@ -38,7 +38,7 @@
 ┌─────────────────────────────────────────────────────────────────┐
 │                         数据层 (Data Layer)                      │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
-│  │   PostgreSQL    │  │     Redis       │  │   文件存储       │  │
+│  │    Supabase     │  │     Redis       │  │ Supabase Storage │  │
 │  │   (持久化数据)   │  │   (缓存/会话)    │  │   (资源文件)     │  │
 │  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
@@ -56,7 +56,7 @@
 
 **后端技术栈:**
 - **FastAPI**: 高性能Python Web框架
-- **SQLAlchemy**: ORM和数据库操作
+- **Supabase Python客户端**: 数据库操作和实时功能
 - **Redis**: 缓存和会话管理
 - **Celery**: 异步任务处理
 - **WebSocket**: 实时通信支持
@@ -67,10 +67,11 @@
 - **Pydantic**: 数据验证和序列化
 
 **基础设施:**
-- **PostgreSQL**: 主数据库
+- **Supabase**: 主数据库和实时功能
 - **Redis**: 缓存和消息队列
 - **Docker**: 容器化部署
 - **Nginx**: 反向代理和负载均衡
+- **Supabase MCP工具**: 数据库管理和操作
 
 ## 2. PBL卡片体系集成方案
 
@@ -725,106 +726,165 @@ class ResourceMatchingStage:
 
 ### 4.1 核心数据模型
 
-```python
-from sqlalchemy import Column, Integer, String, JSON, DateTime, ForeignKey, Text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+```sql
+-- Supabase 数据库表结构设计
 
-Base = declarative_base()
+-- 用户表（使用 Supabase Auth）
+create table public.users (
+    id uuid references auth.users(id) on delete cascade,
+    username text unique,
+    email text unique,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    primary key (id)
+);
 
-class User(Base):
-    __tablename__ = 'users'
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # 关系
-    projects = relationship("Project", back_populates="user")
+-- 启用 RLS
+alter table public.users enable row level security;
 
-class Project(Base):
-    __tablename__ = 'projects'
+-- 项目表
+create table public.projects (
+    id uuid default gen_random_uuid() primary key,
+    user_id uuid references public.users(id) on delete cascade,
+    title text not null,
+    description text,
+    status text default 'draft' check (status in ('draft', 'in_progress', 'completed')),
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
     
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    title = Column(String(200), nullable=False)
-    description = Column(Text)
-    status = Column(String(20), default='draft')  # draft, in_progress, completed
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # 项目数据 (JSON格式存储)
-    requirements_data = Column(JSON)        # 需求调研数据
-    theme_design_data = Column(JSON)        # 主题设计数据
-    teaching_design_data = Column(JSON)     # 教学设计数据
-    resource_data = Column(JSON)            # 资源数据
-    final_solution = Column(JSON)           # 最终方案
-    
-    # 关系
-    user = relationship("User", back_populates="projects")
-    interactions = relationship("ProjectInteraction", back_populates="project")
+    -- 项目数据 (JSON 格式存储)
+    requirements_data jsonb,
+    theme_design_data jsonb,
+    teaching_design_data jsonb,
+    resource_data jsonb,
+    final_solution jsonb
+);
 
-class ProjectInteraction(Base):
-    __tablename__ = 'project_interactions'
-    
-    id = Column(Integer, primary_key=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
-    stage = Column(String(50), nullable=False)
-    user_input = Column(JSON, nullable=False)
-    ai_response = Column(JSON, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    
-    # 关系
-    project = relationship("Project", back_populates="interactions")
+alter table public.projects enable row level security;
 
-class TeachingResource(Base):
-    __tablename__ = 'teaching_resources'
-    
-    id = Column(Integer, primary_key=True)
-    title = Column(String(200), nullable=False)
-    description = Column(Text)
-    category = Column(String(50), nullable=False)  # 文献、音视频、图像等
-    resource_type = Column(String(50), nullable=False)  # 内部、外部链接
-    resource_url = Column(String(500))
-    file_path = Column(String(500))
-    metadata = Column(JSON)  # 额外元数据
-    grade_levels = Column(JSON)  # 适用年级
-    subjects = Column(JSON)  # 适用学科
-    created_at = Column(DateTime, default=datetime.utcnow)
+-- 项目交互表
+create table public.project_interactions (
+    id uuid default gen_random_uuid() primary key,
+    project_id uuid references public.projects(id) on delete cascade,
+    stage text not null,
+    user_input jsonb not null,
+    ai_response jsonb not null,
+    timestamp timestamp with time zone default timezone('utc'::text, now()) not null
+);
 
-class ActivityCard(Base):
-    __tablename__ = 'activity_cards'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=False)
-    category = Column(String(50), nullable=False)
-    phase = Column(String(50), nullable=False)  # 适用阶段
-    duration = Column(String(50))  # 所需时间
-    objectives = Column(JSON)  # 学习目标
-    implementation_guide = Column(Text)  # 实施指南
-    grade_levels = Column(JSON)  # 适用年级
-    subjects = Column(JSON)  # 适用学科
+alter table public.project_interactions enable row level security;
 
-class ToolCard(Base):
-    __tablename__ = 'tool_cards'
-    
-    id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
-    description = Column(Text, nullable=False)
-    category = Column(String(50), nullable=False)
-    usage_guide = Column(Text)  # 使用指南
-    template_content = Column(Text)  # 模板内容
-    compatible_activities = Column(JSON)  # 兼容的活动
-    grade_levels = Column(JSON)  # 适用年级
+-- 教学资源表
+create table public.teaching_resources (
+    id uuid default gen_random_uuid() primary key,
+    title text not null,
+    description text,
+    category text not null,
+    resource_type text not null,
+    resource_url text,
+    file_path text,
+    metadata jsonb,
+    grade_levels jsonb,
+    subjects jsonb,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- 活动卡表
+create table public.activity_cards (
+    id text primary key, -- A01-A57
+    name text not null,
+    description text not null,
+    category text not null,
+    phase text not null,
+    duration text,
+    objectives jsonb,
+    implementation_guide text,
+    grade_levels jsonb,
+    subjects jsonb
+);
+
+-- 工具卡表
+create table public.tool_cards (
+    id text primary key, -- B00-B62
+    name text not null,
+    description text not null,
+    category text not null,
+    usage_guide text,
+    template_content text,
+    compatible_activities jsonb,
+    grade_levels jsonb
+);
+
+-- 合作卡表
+create table public.cooperation_cards (
+    id text primary key, -- C01-C25
+    name text not null,
+    description text not null,
+    phase text not null,
+    team_size_range text,
+    usage_scenario text,
+    facilitation_guide text
+);
 ```
 
 ### 4.2 Redis数据结构
 
 ```python
-# 会话状态管理
+# Supabase 客户端配置
+from supabase import create_client, Client
+import os
+
+class SupabaseClient:
+    def __init__(self):
+        url = os.environ.get("SUPABASE_URL")
+        key = os.environ.get("SUPABASE_ANON_KEY")
+        self.supabase: Client = create_client(url, key)
+    
+    async def create_user_profile(self, user_id: str, user_data: dict):
+        """创建用户配置文件"""
+        result = self.supabase.table('users').insert({
+            'id': user_id,
+            'username': user_data.get('username'),
+            'email': user_data.get('email')
+        }).execute()
+        return result
+    
+    async def create_project(self, project_data: dict):
+        """创建项目"""
+        result = self.supabase.table('projects').insert(project_data).execute()
+        return result
+    
+    async def get_user_projects(self, user_id: str):
+        """获取用户项目"""
+        result = self.supabase.table('projects').select('*').eq('user_id', user_id).execute()
+        return result
+    
+    async def update_project(self, project_id: str, updates: dict):
+        """更新项目"""
+        result = self.supabase.table('projects').update(updates).eq('id', project_id).execute()
+        return result
+    
+    async def get_activity_cards(self, stage: str = None):
+        """获取活动卡"""
+        query = self.supabase.table('activity_cards').select('*')
+        if stage:
+            query = query.eq('phase', stage)
+        result = query.execute()
+        return result
+    
+    async def get_tool_cards(self, category: str = None):
+        """获取工具卡"""
+        query = self.supabase.table('tool_cards').select('*')
+        if category:
+            query = query.eq('category', category)
+        result = query.execute()
+        return result
+    
+    async def subscribe_to_project_changes(self, project_id: str, callback):
+        """订阅项目变更"""
+        self.supabase.table('projects').on('UPDATE', callback).eq('id', project_id).subscribe()
+
+# 会话状态管理（使用 Redis 作为缓存）
 class SessionState:
     def __init__(self, redis_client):
         self.redis = redis_client
@@ -1714,7 +1774,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
@@ -1741,25 +1800,16 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
       - redis
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/pbl_agent
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
       - REDIS_URL=redis://redis:6379
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     volumes:
       - ./exports:/app/exports
       - ./templates:/app/templates
-    restart: unless-stopped
-
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_DB=pbl_agent
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   redis:
@@ -1777,9 +1827,6 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - ./ssl:/etc/nginx/ssl
     restart: unless-stopped
-
-volumes:
-  postgres_data:
 ```
 
 ### 8.2 监控与日志
@@ -2003,31 +2050,172 @@ def generate_professional_output_structure(self, project_data: dict) -> dict:
     }
 ```
 
-## 10. 总结
+## 10. Supabase MCP工具集成
+
+### 10.1 MCP工具使用说明
+
+在这个项目中，我们使用以下 Supabase MCP 工具来管理数据库操作：
+
+```python
+class SupabaseMCPIntegration:
+    def __init__(self, project_id: str):
+        self.project_id = project_id
+    
+    async def initialize_database(self):
+        """初始化数据库表结构"""
+        # 创建用户表
+        await self.create_table_if_not_exists('users')
+        
+        # 创建项目表
+        await self.create_table_if_not_exists('projects')
+        
+        # 创建卡片表
+        await self.create_table_if_not_exists('activity_cards')
+        await self.create_table_if_not_exists('tool_cards')
+        await self.create_table_if_not_exists('cooperation_cards')
+    
+    async def create_table_if_not_exists(self, table_name: str):
+        """检查并创建表"""
+        # 使用 mcp__supabase__list_tables 检查表是否存在
+        tables = await self.list_tables()
+        
+        if table_name not in [t['name'] for t in tables]:
+            # 使用 mcp__supabase__apply_migration 创建表
+            await self.apply_migration(table_name)
+    
+    async def insert_card_data(self, card_type: str, card_data: dict):
+        """插入卡片数据"""
+        table_name = f"{card_type}_cards"
+        
+        # 使用 mcp__supabase__execute_sql 插入数据
+        sql = f"""
+        INSERT INTO {table_name} (id, name, description, category, phase)
+        VALUES (%(id)s, %(name)s, %(description)s, %(category)s, %(phase)s)
+        ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        category = EXCLUDED.category,
+        phase = EXCLUDED.phase
+        """
+        
+        await self.execute_sql(sql, card_data)
+    
+    async def get_project_data(self, project_id: str):
+        """获取项目数据"""
+        sql = "SELECT * FROM projects WHERE id = %s"
+        return await self.execute_sql(sql, [project_id])
+    
+    async def update_project_stage(self, project_id: str, stage: str, data: dict):
+        """更新项目阶段数据"""
+        sql = f"""
+        UPDATE projects 
+        SET {stage}_data = %s, updated_at = NOW()
+        WHERE id = %s
+        """
+        await self.execute_sql(sql, [data, project_id])
+    
+    async def generate_typescript_types(self):
+        """生成 TypeScript 类型定义"""
+        # 使用 mcp__supabase__generate_typescript_types
+        return await self.generate_types()
+    
+    async def setup_row_level_security(self):
+        """设置行级安全策略"""
+        # 用户只能访问自己的项目
+        rls_policy = """
+        CREATE POLICY "Users can only access their own projects" ON projects
+        FOR ALL USING (auth.uid() = user_id);
+        """
+        await self.execute_sql(rls_policy)
+        
+        # 用户只能访问自己的交互记录
+        interaction_policy = """
+        CREATE POLICY "Users can only access their own interactions" ON project_interactions
+        FOR ALL USING (auth.uid() = (SELECT user_id FROM projects WHERE id = project_id));
+        """
+        await self.execute_sql(interaction_policy)
+```
+
+### 10.2 开发流程优化
+
+使用 Supabase MCP 工具后，开发流程将大幅优化：
+
+1. **无需本地数据库**: 不再需要在本地安装和配置 PostgreSQL
+2. **自动类型生成**: 使用 `mcp__supabase__generate_typescript_types` 自动生成前端类型
+3. **实时功能**: 利用 Supabase 内置的实时订阅功能
+4. **一键部署**: 只需要配置 Supabase 项目参数即可部署
+
+### 10.3 环境变量配置
+
+```bash
+# .env 文件
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
+GEMINI_API_KEY=your-gemini-key
+REDIS_URL=redis://localhost:6379
+```
+
+### 10.4 数据库初始化脚本
+
+```python
+# scripts/init_database.py
+import asyncio
+from supabase_mcp_integration import SupabaseMCPIntegration
+
+async def main():
+    # 初始化数据库
+    mcp = SupabaseMCPIntegration("your-project-id")
+    await mcp.initialize_database()
+    
+    # 导入卡片数据
+    await mcp.import_pbl_cards()
+    
+    # 设置安全策略
+    await mcp.setup_row_level_security()
+    
+    print("数据库初始化完成！")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+## 11. 总结
 
 这个技术方案实现了一个完整的AI Agent辅助PBL教学设计工具，具有以下特点：
 
-### 10.1 核心优势
+### 11.1 核心优势
 - **专业化卡片体系**: 基于157张专业PBL卡片的完整知识库
 - **智能匹配算法**: 活动卡、工具卡、合作卡的智能组合推荐
 - **长上下文支持**: 充分利用Gemini-2.5-Pro的2M token窗口
 - **标准化输出**: 完全符合《长安的荔枝》专业标准的方案格式
 - **实时交互**: WebSocket + 流式输出提供流畅的用户体验
+- **Supabase集成**: 更快的开发速度和更简单的部署
 
-### 10.2 技术亮点
+### 11.2 技术亮点
 - **卡片关系建模**: 完整的卡片间关联关系和匹配逻辑
 - **决策树算法**: 基于多维度因素的智能卡片选择
 - **模块化架构**: 前后端分离，各模块职责清晰
 - **专业化模板**: 基于真实PBL案例的输出模板系统
+- **MCP工具集成**: 使用Supabase MCP工具简化数据库操作
 - **监控运维**: 完善的日志和监控体系
 
-### 10.3 可扩展性
+### 11.3 可扩展性
 - **卡片库扩展**: 活动卡、工具卡、合作卡可通过配置动态扩展
 - **多模型支持**: 架构支持未来接入其他AI模型
 - **多租户**: 支持企业级多租户部署
 - **国际化**: 前端支持多语言扩展
+- **实时协作**: 利用Supabase的实时功能实现多用户协作
 
-这个方案在保证功能完整性的同时，充分考虑了PBL教学的专业性要求、开发效率、运维成本和用户体验，是一个实用且可持续发展的技术架构。
+### 11.4 Supabase集成带来的额外优势
+- **无需本地数据库设置**: 开发环境搭建更快
+- **内置认证系统**: 使用Supabase Auth简化用户管理
+- **实时数据同步**: 内置实时订阅功能
+- **自动备份和恢复**: Supabase的云服务保证数据安全
+- **类型安全**: 自动生成TypeScript类型定义
+- **成本优化**: 减少服务器资源消耗和维护成本
+
+这个方案在保证功能完整性的同时，充分考虑了PBL教学的专业性要求、开发效率、运维成本和用户体验，是一个实用且可持续发展的技术架构。通过使用Supabase和MCP工具，这个方案在简化开发流程的同时，也提供了更强的扩展性和维护性。
 
 <function_calls>
 <invoke name="TodoWrite">

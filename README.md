@@ -1,132 +1,186 @@
 # AI Agent辅助PBL教学设计工具
 
-## 项目概述
+基于Gemini-2.5-Pro的四阶段PBL教学设计系统，为教育工作者提供智能化的项目式学习设计支持。
 
-这是一个基于AI Agent的PBL（项目式学习）教学设计工具，通过四阶段交互式流程，帮助教师快速创建专业化的PBL教学方案。
+## 🚀 项目特性
 
-## 核心特性
+- **智能化设计**: 基于AI的PBL教学方案生成
+- **四阶段流程**: 需求调研 → 主题设计 → 教学设计 → 资源匹配
+- **个性化定制**: 根据不同教学场景提供定制化解决方案
+- **资源丰富**: 内置多种教学卡片和工具模板
 
-- 🤖 **AI智能辅助**: 基于Gemini-2.5-Pro的长上下文能力
-- 📚 **专业卡片体系**: 集成157张专业PBL卡片（活动卡57张 + 工具卡63张 + 合作卡25张）
-- 🎯 **四阶段流程**: 需求调研 → 主题设计 → 教学设计 → 资源匹配
-- 📄 **标准化输出**: 符合《长安的荔枝》专业标准的教学方案
-- ⚡ **实时交互**: WebSocket支持的流式响应体验
-
-## 技术栈
+## 🏗️ 技术架构
 
 ### 后端
-- **Python 3.11** + **FastAPI** - 高性能API服务
-- **PostgreSQL** - 主数据库
-- **Redis** - 缓存和会话管理
-- **SQLAlchemy** - ORM框架
-- **Gemini-2.5-Pro** - AI大模型服务
+- **框架**: FastAPI + Python 3.11
+- **数据库**: Supabase (PostgreSQL)
+- **缓存**: Redis
+- **AI模型**: Google Gemini-2.5-Pro
+- **认证**: JWT Token
 
 ### 前端
-- **React 18** + **TypeScript** - 类型安全的组件开发
-- **Next.js 14** - 全栈框架
-- **Ant Design** - 企业级UI组件
-- **Zustand** - 状态管理
-- **Socket.io** - 实时通信
+- **框架**: Next.js 15 + React 19
+- **样式**: Tailwind CSS + shadcn/ui
+- **语言**: TypeScript
+- **状态管理**: React Hooks
 
-## 项目结构
+## 📋 环境要求
 
-```
-亿小步AI Agent训练资料/
-├── PRD.md                           # 产品需求文档
-├── AI_Agent_技术实现方案.md          # 技术实现方案
-├── AI_Agent_PBL_实施计划.md          # 完整实施计划
-├── PBL教学活动卡.pdf                # PBL活动卡资源
-├── PBL教学工具卡.pdf                # PBL工具卡资源
-├── PBL教学合作卡.pdf                # PBL合作卡资源
-├── 《长安的荔枝》3-4年级.pdf         # 标准案例参考
-└── extracted_texts/                # 提取的文本资源
-```
-
-## 快速开始
-
-### 1. 克隆项目
-```bash
-git clone https://github.com/liuhuaize/ai-agent-pbl-tool.git
-cd ai-agent-pbl-tool
-```
-
-### 2. 环境准备
 - Python 3.11+
 - Node.js 18+
-- PostgreSQL 15+
-- Redis 7+
+- Redis 6+
+- Supabase 账户
+- Google Gemini API Key
 
-### 3. 查看实施计划
-详细的开发步骤请参考 [AI_Agent_PBL_实施计划.md](./AI_Agent_PBL_实施计划.md)
+## 🛠️ 安装配置
 
-## 核心功能
+### 1. 克隆项目
 
-### 🎯 四阶段设计流程
+```bash
+git clone <repository-url>
+cd pbl-agent
+```
 
-1. **需求调研阶段**
-   - 动态表单收集教学需求
-   - AI分析生成项目主题建议
-   - 支持主题个性化定制
+### 2. 后端配置
 
-2. **主题设计阶段**
-   - 人机协作确定核心框架
-   - 生成驱动性问题和教学目标
-   - 实时预览和调整功能
+```bash
+cd backend
 
-3. **教学设计阶段**
-   - 基于157张专业卡片的智能推荐
-   - 活动-工具-合作的最优组合
-   - 详细教学步骤自动生成
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Windows: venv\\Scripts\\activate
 
-4. **资源匹配阶段**
-   - 智能推荐相关教学资源
-   - 生成完整的实施方案
-   - 多格式专业化导出
+# 安装依赖
+pip install -r requirements.txt
 
-### 🎨 专业化输出
+# 配置环境变量
+cp ../.env.example .env
+# 编辑 .env 文件，填入实际配置
+```
 
-- **完整方案包**: 20-25页专业PDF文档
-- **教师指导包**: 实施要点和注意事项
-- **学生材料包**: 任务单和工具模板
-- **数字化工具**: 可编辑的模板文件
+### 3. 前端配置
 
-## 开发进度
+```bash
+cd frontend
 
-- [x] 项目规划和需求分析
-- [x] 技术方案设计
-- [x] 实施计划制定
-- [ ] 基础架构搭建
-- [ ] AI引擎开发
-- [ ] 四阶段流程实现
-- [ ] 前端界面开发
-- [ ] 导出系统实现
-- [ ] 测试和优化
-- [ ] 部署上线
+# 安装依赖
+npm install
+# 或使用 pnpm
+pnpm install
+```
 
-## 贡献指南
+### 4. 启动服务
+
+```bash
+# 启动后端 (在 backend 目录)
+python main.py
+
+# 启动前端 (在 frontend 目录)
+npm run dev
+```
+
+## 📝 开发规范
+
+### 代码质量
+
+项目已配置完整的代码质量工具链：
+
+#### 后端代码质量
+```bash
+# 代码格式化
+black .
+isort .
+
+# 代码检查
+flake8
+mypy .
+
+# 运行测试
+pytest
+```
+
+#### 前端代码质量
+```bash
+# 代码检查
+npm run lint
+npm run lint:fix
+
+# 代码格式化
+npm run format
+npm run format:check
+
+# 类型检查
+npm run type-check
+```
+
+### 环境变量
+
+复制 `.env.example` 到 `.env` 并配置以下必需变量：
+
+- `SUPABASE_URL`: Supabase项目URL
+- `SUPABASE_ANON_KEY`: Supabase匿名密钥
+- `SUPABASE_SERVICE_KEY`: Supabase服务密钥
+- `GEMINI_API_KEY`: Google Gemini API密钥
+- `SECRET_KEY`: JWT签名密钥（至少32位）
+- `REDIS_URL`: Redis连接URL
+
+## 🧪 测试
+
+```bash
+# 后端测试
+cd backend
+pytest
+
+# 前端测试
+cd frontend
+npm test
+```
+
+## 📚 API文档
+
+启动后端服务后，访问以下地址查看API文档：
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## 🔄 部署
+
+### Docker部署 (推荐)
+
+```bash
+# 构建并启动所有服务
+docker-compose up -d
+```
+
+### 手动部署
+
+1. 配置生产环境变量
+2. 构建前端应用
+3. 启动后端服务
+4. 配置反向代理 (Nginx/Apache)
+
+## 🤝 贡献指南
 
 1. Fork 项目
-2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交变更 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
+2. 创建特性分支 (`git checkout -b feature/新功能`)
+3. 提交更改 (`git commit -am '添加新功能'`)
+4. 推送到分支 (`git push origin feature/新功能`)
 5. 创建 Pull Request
 
-## 许可证
+## 📄 许可证
 
-本项目采用 MIT 许可证 - 详情请查看 [LICENSE](LICENSE) 文件
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-## 联系方式
+## 🆘 支持
 
-- 项目维护者: [liuhuaize](https://github.com/liuhuaize)
-- 邮箱: [你的邮箱]
-- 项目链接: [https://github.com/liuhuaize/ai-agent-pbl-tool](https://github.com/liuhuaize/ai-agent-pbl-tool)
+如有问题或建议，请：
 
-## 致谢
+1. 查看现有 [Issues](../../issues)
+2. 创建新的 Issue
+3. 联系开发团队
 
-- 感谢PBL教学法的研究者们提供的理论基础
-- 感谢《长安的荔枝》案例提供的标准参考
-- 感谢所有为项目贡献的开发者和教育工作者
+## 🔗 相关链接
 
----
-
-**注意**: 这是一个教育AI工具项目，旨在帮助教师提高PBL教学设计效率。请遵守相关的教育和AI使用规范。
+- [项目文档](./docs/)
+- [API参考](./docs/api/)
+- [设计文档](./docs/design/)

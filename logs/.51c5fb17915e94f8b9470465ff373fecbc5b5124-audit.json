@@ -1,0 +1,25 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 14
+    },
+    "auditLog": "/root/pbl-agent/logs/.51c5fb17915e94f8b9470465ff373fecbc5b5124-audit.json",
+    "files": [
+        {
+            "date": 1752939669356,
+            "name": "/root/pbl-agent/logs/mcp-puppeteer-2025-07-19.log",
+            "hash": "09b589edff3b638bf2cf45ac2bbb1e2901c7e39dc7afd74d5bb8e8811fed2276"
+        },
+        {
+            "date": 1752972888403,
+            "name": "/root/pbl-agent/logs/mcp-puppeteer-2025-07-20.log",
+            "hash": "5015f81f63bab9ac87120280f58caedb02444fcdd5fb73ac9638a950927c8833"
+        },
+        {
+            "date": 1753853531214,
+            "name": "/root/pbl-agent/logs/mcp-puppeteer-2025-07-30.log",
+            "hash": "6c56381b1b36aa5997681af8f03a35d58398e1fb959eec1060c83f12039377c2"
+        }
+    ],
+    "hashType": "sha256"
+}
